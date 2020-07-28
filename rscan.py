@@ -52,7 +52,13 @@ while y < countdata['n_tx']:
 	print("TX nr :" + str(y+1))
 	if (y%100==0):
 		time.sleep(3.0)
-		addrdata = json.loads(request_source(urladdr + "?offset=" + str(y)))
+			while True:
+				try:
+					addrdata = json.loads(request_source(urladdr + "?offset=" + str(y)))
+					break
+				except ValueError:
+					time.sleep(7.0)
+	
 	print("hash: " + str(addrdata[0][y%100]['tx']['self_hash']))
 	print("number of inputs: " + str(len(addrdata[0][y%100]['tx']['inputs'])))
 	zy = 0
