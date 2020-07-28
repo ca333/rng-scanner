@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 
 #################################################################################
@@ -8,7 +8,7 @@
 #|  |_)  |    ______ |   (----`|  ,----'  /  ^  \    |   \|  |                  #
 #|      /    |______| \   \    |  |      /  /_\  \   |  . `  |                  #
 #|  |\  \----.    .----)   |   |  `----./  _____  \  |  |\   |                  #
-#| _| `._____|    |_______/     \______/__/     \__\ |__| \__|  v0.1.2          #
+#| _| `._____|    |_______/     \______/__/     \__\ |__| \__|  v0.1.4          #
 #                                                                               #
 #GNU PL - 2015 - ca333                                                          # 
 #                                                                               #         
@@ -16,44 +16,54 @@
 #################################################################################
 
 import json
-import urllib2
+import urllib
 import time
 import sys
+from urllib3 import Retry, PoolManager
 
-#for some reason blockchain.info api-chain is 59711 blocks short..
-blockstart = 170399
-blockstart += 59711
-blockcount = urllib2.urlopen("https://blockchain.info/de/q/getblockcount").read()
+print("WELCOME TO R-scan v0.1.4!")
 
-print "WELCOME TO R-scan v0.1.2!"
-
-print "ADDRESS-R-SCAN: "
-addr = raw_input("type address:  ")
-urladdr = "https://blockchain.info/de/rawaddr/" + str(addr)
+print("ADDRESS-R-SCAN: ")
+addr = input("type address:  ")
+urladdr = "https://api-r.bitcoinchain.com/v1/address/txs/" + str(addr)
+countaddr = "https://blockchain.info/de/rawaddr/" + str(addr)
 #control api-url
-print urladdr 
-addrdata = json.load(urllib2.urlopen(urladdr))
-print "Data for pubkey: " + str(addr)
-print "number of txs: " + str(addrdata['n_tx'])
+print(urladdr)
+
+retries = Retry(connect=5, read=2, redirect=5, backoff_factor=4)
+http = PoolManager(retries=retries)
+
+
+#https://stackoverflow.com/a/63112319
+def request_source(urll):
+	return http.request('GET', urll).data.decode('utf-8')
+
+#print(request_source(countaddr))
+
+countdata = json.loads(request_source(countaddr))
+print("Data for pubkey: " + str(addr))
+print("number of txs: " + str(countdata['n_tx']))
 #tx-details:
 y = 0
 inputs = []
-while y < addrdata['n_tx']:	
-	print "#################################################################################"
-	print "TX nr :" + str(y+1)
-	print "hash: " + str(addrdata['txs'][y]['hash'])
-	print "number of inputs: " + str(addrdata['txs'][y]['vin_sz'])
-	#only if 
-	#if addrdata['txs'][y]['vin_sz'] > 1:
+
+while y < countdata['n_tx']:
+	print("#################################################################################")
+	print("TX nr :" + str(y+1))
+	if (y%100==0):
+		time.sleep(3.0)
+		addrdata = json.loads(request_source(urladdr + "?offset=" + str(y)))
+	print("hash: " + str(addrdata[0][y%100]['tx']['self_hash']))
+	print("number of inputs: " + str(len(addrdata[0][y%100]['tx']['inputs'])))
 	zy = 0
-	while zy < addrdata['txs'][y]['vin_sz']:
-		print "Input-ScriptNR " + str(zy+1) + " :" + str(addrdata['txs'][y]['inputs'][zy]['script'])
-		inputs.append(addrdata['txs'][y]['inputs'][zy]['script'])
+	while zy < len(addrdata[0][y%100]['tx']['inputs']):
+		print("Input-ScriptNR " + str(zy+1) + " :" + str(addrdata[0][y%100]['tx']['inputs'][zy]['in_script']['hex']))
+		inputs.append(addrdata[0][y%100]['tx']['inputs'][zy]['in_script']['hex'])
 		zy += 1
 	
 	y += 1
 	
-print "compare: "
+print("compare: ")
 
 xi = 0
 zi = 1
@@ -65,11 +75,11 @@ while xi < lenx-1:
 	x = 0
 	while x < lenx-zi: 
 		if inputs[xi][10:74] == inputs[x+zi][10:74]:
-			print "In Input NR: " + str(xi) + "[global increment] " + str(inputs[xi])
+			print("In Input NR: " + str(xi) + "[global increment] " + str(inputs[xi]))
 			print('\a')
-                        print "Resued R-Value: "
-			print inputs[x+zi][10:74]
-                        alert += 1
+			print("Reused R-Value: ")
+			print(inputs[x+zi][10:74])
+			alert += 1
 
 		x += 1
 		
@@ -80,7 +90,7 @@ while xi < lenx-1:
 #alert when everything ok
 
 if alert < 1:
-	print "Good pubKey. No problems."
+	print("Good pubKey. No problems.")
 
 
 sys.exit()
