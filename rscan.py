@@ -58,7 +58,11 @@ while y < countdata['n_tx']:
 				break
 			except ValueError:
 				time.sleep(7.0)
-	
+
+	if (len(addrdata[0])<=(y%100)):
+		print("WARNING: Block explorer in use it not synced! Only the transactions made before 2020 will be scanned!")
+		break
+
 	print("hash: " + str(addrdata[0][y%100]['tx']['self_hash']))
 	print("number of inputs: " + str(len(addrdata[0][y%100]['tx']['inputs'])))
 	zy = 0
