@@ -24,7 +24,13 @@ from urllib3 import Retry, PoolManager
 print("WELCOME TO R-scan v0.1.4!")
 
 print("ADDRESS-R-SCAN: ")
-addr = input("type address:  ")
+
+if (len(sys.argv) < 2):
+	addr = input("type address:  ")
+else:
+	addr = sys.argv[1]
+	print(addr)
+
 urladdr = "https://api-r.bitcoinchain.com/v1/address/txs/" + str(addr)
 countaddr = "https://blockchain.info/de/rawaddr/" + str(addr)
 #control api-url
@@ -86,10 +92,11 @@ while xi < lenx-1:
 	x = 0
 	while x < lenx-zi: 
 		if inputs[xi][10:74] == inputs[x+zi][10:74]:
-			print("In Input NR: " + str(xi) + "[global increment] " + str(inputs[xi]))
-			print('\a')
-			print("Reused R-Value: ")
-			print(inputs[x+zi][10:74])
+			print(addr, file=sys.stderr)
+			print("In Input NR: " + str(xi) + "[global increment] " + str(inputs[xi]), file=sys.stderr)
+			print('\a', file=sys.stderr)
+			print("Reused R-Value: ", file=sys.stderr)
+			print(inputs[x+zi][10:74], file=sys.stderr)
 			alert += 1
 
 		x += 1
