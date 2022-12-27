@@ -11,46 +11,58 @@ print("WELCOME TO R-scan Python3 Edition v0.1.2!")
 addr_files = input("address list file path --> ")
 addr_files = open(addr_files, "r")
 tx_n = 0
+
+tx_information = None 
+tx_id = None	
+tx_count = None
+tx_n = None
+x = None
 while(True):
 	found_reused_r = False
 	addr = addr_files.readline()
 	if not addr:
 		break
-	addr = "1EHNa6Q4Jz2uvNExL497mE43ikXhwF6kZm"
-	urladdr = f"https://sochain.com/api/v2/get_tx_spent/BTC/{str(addr)}"
+	addr = addr.replace("\n", "")
+	print(addr)
+	urladdr = f"https://sochain.com/api/v2/address/BTC/{addr}"
 	headers = {"content-type": "application/json"}
-
-	tx_information= requests.get(urladdr).json()["data"]["txs"]
-	tx_id = tx_information	
-	tx_count = len(tx_information)
-	tx_n = 0
-	x = 1
-	
+	try:
+		tx_info = requests.get(urladdr).json()["data"]["txs"]
+		tx_id = tx_info
+		tx_n = 0
+		x = 1
+	except Exception:
+		continue
 	try:
 		while not found_reused_r:
 			urladdr = f"https://sochain.com/api/v2/tx/BTC/{tx_id[tx_n]['txid']}"
 			rawdata_res = requests.get(urladdr, headers = headers).json()
-			rawdata = rawdata_res["data"]["inputs"][0]["script_hex"]
+			rawdata = rawdata_res["data"]["inputs"][tx_n]["script_asm"]
+			rawdata = rawdata.replace(" ", "")
 			prev_r = rawdata[10:74]
-			while not found_reused_r: 
-				urladdr = f"https://sochain.com/api/v2/tx/BTC/{tx_id[tx_n + x]['txid']}"
-				next_rawdata = requests.get(urladdr).json()["data"]["inputs"][0]["script_hex"]
-				print(f"compare : {prev_r} <=> {next_rawdata[10:74]}")
-				if prev_r == next_rawdata[10:74]:
-					print('\a')
-					print("-----------------------------")
-					print(f"Address : {addr}")
-					print(f"TXID : {tx_id[tx_n]['txid']}")
-					print(f"Reused R TXID : {tx_id[tx_n + x]['txid']}")
-					print("Resued R-Value: ")
-					print(next_rawdata[10:74])
-					print("-----------------------------")
+			if(len(rawdata_res["data"]["inputs"]) == 1):
+				tx_n += 1
+				continue
+			while x < len(rawdata_res["data"]["inputs"]): 
+				print(f"compare : {prev_r} <=> {rawdata_res['data']['inputs'][x]['script_asm'][10:74]}")
+				if prev_r == rawdata_res['data']['inputs'][x]['script_asm'][10:74]:
+					message = ""
+					message += "-----------------------------\n"
+					message += f"Address : {addr}\n"
+					message += f"TXID : {tx_id[x]['txid']}\n"
+					message += "Resued R-Value: \n"
+					message += format(int(prev_r, 16), "064x") + "\n"
+					message += "-----------------------------\n"
+					print(message)
+					reused = open("vulnList.txt", "a")
+					print(message, file = reused)
+					reused.close()
 					found_reused_r = True
-				prev_r = next_rawdata[10:74]
-					
 				x += 1
 			tx_n += 1
-	except Exception:
+			x = 1
+
+	except Exception as e:
 		pass
 
 addr_files.close()
