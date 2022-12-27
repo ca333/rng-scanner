@@ -53,7 +53,7 @@ while(True):
 					message = ""
 					message += "-----------------------------\n"
 					message += f"Address : {addr}\n"
-					message += f"TXID : {tx_id[0]['txid']}\n"
+					message += f"TXID2 : {tx_id[tx_n]['txid']}\n"
 					message += "Reused R-Value: \n"
 					message += prev_r + "\n"
 					message += "-----------------------------\n"
