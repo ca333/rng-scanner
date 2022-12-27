@@ -49,8 +49,8 @@ while(True):
 					message = ""
 					message += "-----------------------------\n"
 					message += f"Address : {addr}\n"
-					message += f"TXID : {tx_id[x]['txid']}\n"
-					message += "Resued R-Value: \n"
+					message += f"TXID : {tx_id[tx_n]['txid']}\n"
+					message += "Reused R-Value: \n"
 					message += format(int(prev_r, 16), "064x") + "\n"
 					message += "-----------------------------\n"
 					print(message)
