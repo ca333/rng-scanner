@@ -1,7 +1,5 @@
-import json
 import requests
-import time
-import sys
+import re
 
 blockstart = 170399
 blockstart += 59711
@@ -22,8 +20,13 @@ while(True):
 	addr = addr_files.readline()
 	if not addr:
 		break
+	if(not addr.startswith("1")):
+		continue
+	addr = addr[:34]
 	addr = addr.replace("\n", "")
 	print(addr)
+	if(addr == ""):
+		continue
 	urladdr = f"https://sochain.com/api/v2/address/BTC/{addr}"
 	headers = {"content-type": "application/json"}
 	try:
@@ -37,21 +40,22 @@ while(True):
 		while not found_reused_r:
 			urladdr = f"https://sochain.com/api/v2/tx/BTC/{tx_id[tx_n]['txid']}"
 			rawdata_res = requests.get(urladdr, headers = headers).json()
-			rawdata = rawdata_res["data"]["inputs"][tx_n]["script_asm"]
+			rawdata = rawdata_res["data"]["inputs"][0]["script_asm"]
 			rawdata = rawdata.replace(" ", "")
 			prev_r = rawdata[10:74]
 			if(len(rawdata_res["data"]["inputs"]) == 1):
 				tx_n += 1
 				continue
 			while x < len(rawdata_res["data"]["inputs"]): 
+				print()
 				print(f"compare : {prev_r} <=> {rawdata_res['data']['inputs'][x]['script_asm'][10:74]}")
 				if prev_r == rawdata_res['data']['inputs'][x]['script_asm'][10:74]:
 					message = ""
 					message += "-----------------------------\n"
 					message += f"Address : {addr}\n"
-					message += f"TXID : {tx_id[tx_n]['txid']}\n"
+					message += f"TXID : {tx_id[0]['txid']}\n"
 					message += "Reused R-Value: \n"
-					message += format(int(prev_r, 16), "064x") + "\n"
+					message += prev_r + "\n"
 					message += "-----------------------------\n"
 					print(message)
 					reused = open("vulnList.txt", "a")
