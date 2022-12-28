@@ -42,14 +42,14 @@ while(True):
 			rawdata_res = requests.get(urladdr, headers = headers).json()
 			rawdata = rawdata_res["data"]["inputs"][0]["script_asm"]
 			rawdata = rawdata.replace(" ", "")
-			prev_r = rawdata[10:74]
+			prev_r = rawdata[8:72]
 			if(len(rawdata_res["data"]["inputs"]) == 1):
 				tx_n += 1
 				continue
 			while x < len(rawdata_res["data"]["inputs"]): 
 				print()
-				print(f"compare : {prev_r} <=> {rawdata_res['data']['inputs'][x]['script_asm'][10:74]}")
-				if prev_r == rawdata_res['data']['inputs'][x]['script_asm'][10:74]:
+				print(f"compare : {prev_r} <=> {rawdata_res['data']['inputs'][x]['script_asm'][8:72]}")
+				if prev_r == rawdata_res['data']['inputs'][x]['script_asm'][8:72]:
 					message = ""
 					message += "-----------------------------\n"
 					message += f"Address : {addr}\n"
