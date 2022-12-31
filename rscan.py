@@ -2,9 +2,9 @@ import requests
 import re
 import sys
 
+print("WELCOME TO R-scan Python3 Edition v0.1.2!")
 if(len(sys.argv) == 2):
 	if(sys.argv[1] == "grab"):
-		print("WELCOME TO R-scan Python3 Edition v0.1.2!")
 		print("--- GRAB MODE ---")
 		url = "https://blockchain.info/unconfirmed-transactions?format=json"
 		tx_ids = []
@@ -81,7 +81,6 @@ if(len(sys.argv) == 2):
 			except Exception:
 				continue
 else:
-	print("WELCOME TO R-scan Python3 Edition v0.1.2!")
 
 	addr_files = input("address list file path --> ")
 	addr_files = open(addr_files, "r")
