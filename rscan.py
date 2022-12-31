@@ -11,6 +11,7 @@ if(len(sys.argv) == 2):
 		while(True):
 
 			found_reused_r = False
+			skip_address   = False
 			headers = {"content-type": "application/json"}
 			try:
 				tx_info = requests.get(url).json()["txs"]
@@ -22,29 +23,45 @@ if(len(sys.argv) == 2):
 					headers = {"content-type": "application/json"}
 					tx_info = requests.get(urladdr).json()["data"]
 					tx_addr = tx_info["inputs"][0]["address"]
+
 					print(f"ADDRESS : {tx_addr} ", end = "")
-					print(f"TXID : {txid}")
 					if(not tx_addr.startswith("1")):
 						print("SKIP")
 						continue
-					print()
+					urladdr = f"https://sochain.com/api/v2/address/BTC/{tx_addr}"
+					headers = {"content-type": "application/json"}
 					try:
-						while not found_reused_r:
-							rawdata = tx_info["inputs"][0]["script_asm"]
+						tx_info = requests.get(urladdr).json()["data"]["txs"]
+						tx_id = tx_info
+						tx_n = 0
+						x = 1
+					except Exception:
+						continue
+					try:
+						while not found_reused_r or not skip_address:
+							urladdr = f"https://sochain.com/api/v2/tx/BTC/{tx_id[tx_n]['txid']}"
+							rawdata_res = requests.get(urladdr, headers = headers).json()
+							rawdata = rawdata_res["data"]["inputs"][0]["script_asm"]
 							rawdata = rawdata.replace(" ", "")
 							prev_r = rawdata[8:72]
-							if(len(tx_info["inputs"]) == 1):
+
+							if(len(rawdata_res["data"]["inputs"]) == 0):
 								break
-							
-							x = 1
-							while x <= len(tx_info["inputs"]): 
+							if(len(rawdata_res["data"]["inputs"]) == 1):
+								tx_n += 1
+								continue
+							while x < len(rawdata_res["data"]["inputs"]): 
 								print()
-								print(f"compare : {prev_r} <=> {tx_info['inputs'][x]['script_asm'][8:72]}")
-								if prev_r == tx_info['inputs'][x]['script_asm'][8:72]:
+								print(f"compare : {prev_r} <=> {rawdata_res['data']['inputs'][x]['script_asm'][8:72]}")
+								if prev_r == rawdata_res['data']['inputs'][x]['script_asm'][8:72]:
+									print("¥a")
+									if(not len(prev_r) == 64):
+										skip_address = True
+										break
 									message = ""
 									message += "-----------------------------\n"
 									message += f"Address : {tx_addr}\n"
-									message += f"TXID : {txid}\n"
+									message += f"TXID : {tx_id[tx_n]['txid']}\n"
 									message += "Reused R-Value: \n"
 									message += prev_r + "\n"
 									message += "-----------------------------\n"
@@ -54,8 +71,8 @@ if(len(sys.argv) == 2):
 									reused.close()
 									found_reused_r = True
 								x += 1
-							print(x, len(tx_info["inputs"]))
-						x = 1
+							tx_n += 1
+							x = 1
 
 					except Exception as e:
 						pass
@@ -103,6 +120,9 @@ else:
 				rawdata = rawdata_res["data"]["inputs"][0]["script_asm"]
 				rawdata = rawdata.replace(" ", "")
 				prev_r = rawdata[8:72]
+
+				if(len(rawdata_res["data"]["inputs"]) == 0):
+					break
 				if(len(rawdata_res["data"]["inputs"]) == 1):
 					tx_n += 1
 					continue
