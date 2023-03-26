@@ -1,86 +1,151 @@
-#!/usr/bin/python
-
-
-#################################################################################
-#                                                                               #
-#.______               _______.  ______     ___      .__   __.                  #
-#|   _  \             /       | /      |   /   \     |  \ |  |                  # 
-#|  |_)  |    ______ |   (----`|  ,----'  /  ^  \    |   \|  |                  #
-#|      /    |______| \   \    |  |      /  /_\  \   |  . `  |                  #
-#|  |\  \----.    .----)   |   |  `----./  _____  \  |  |\   |                  #
-#| _| `._____|    |_______/     \______/__/     \__\ |__| \__|  v0.1.2          #
-#                                                                               #
-#GNU PL - 2015 - ca333                                                          # 
-#                                                                               #         
-#USE AT OWN RISK!                                                               #
-#################################################################################
-
-import json
-import urllib2
-import time
+import requests
+import re
 import sys
 
-#for some reason blockchain.info api-chain is 59711 blocks short..
-blockstart = 170399
-blockstart += 59711
-blockcount = urllib2.urlopen("https://blockchain.info/de/q/getblockcount").read()
+print("WELCOME TO R-scan Python3 Edition v0.1.2!")
+if(len(sys.argv) == 2):
+	if(sys.argv[1] == "grab"):
+		print("--- GRAB MODE ---")
+		url = "https://blockchain.info/unconfirmed-transactions?format=json"
+		tx_ids = []
+		while(True):
 
-print "WELCOME TO R-scan v0.1.2!"
+			found_reused_r = False
+			skip_address   = False
+			headers = {"content-type": "application/json"}
+			try:
+				tx_info = requests.get(url).json()["txs"]
+				for tx in tx_info:
+					tx_ids.append(tx["hash"])
+				tx_n = 0
+				for txid in tx_ids:
+					urladdr = f"https://sochain.com/api/v2/tx/BTC/{txid}"
+					headers = {"content-type": "application/json"}
+					tx_info = requests.get(urladdr).json()["data"]
+					tx_addr = tx_info["inputs"][0]["address"]
 
-print "ADDRESS-R-SCAN: "
-addr = raw_input("type address:  ")
-urladdr = "https://blockchain.info/de/rawaddr/" + str(addr)
-#control api-url
-print urladdr 
-addrdata = json.load(urllib2.urlopen(urladdr))
-print "Data for pubkey: " + str(addr)
-print "number of txs: " + str(addrdata['n_tx'])
-#tx-details:
-y = 0
-inputs = []
-while y < addrdata['n_tx']:	
-	print "#################################################################################"
-	print "TX nr :" + str(y+1)
-	print "hash: " + str(addrdata['txs'][y]['hash'])
-	print "number of inputs: " + str(addrdata['txs'][y]['vin_sz'])
-	#only if 
-	#if addrdata['txs'][y]['vin_sz'] > 1:
-	zy = 0
-	while zy < addrdata['txs'][y]['vin_sz']:
-		print "Input-ScriptNR " + str(zy+1) + " :" + str(addrdata['txs'][y]['inputs'][zy]['script'])
-		inputs.append(addrdata['txs'][y]['inputs'][zy]['script'])
-		zy += 1
-	
-	y += 1
-	
-print "compare: "
+					print(f"ADDRESS : {tx_addr} ", end = "")
+					if(not tx_addr.startswith("1")):
+						print("SKIP")
+						continue
+					urladdr = f"https://sochain.com/api/v2/address/BTC/{tx_addr}"
+					headers = {"content-type": "application/json"}
+					try:
+						tx_info = requests.get(urladdr).json()["data"]["txs"]
+						tx_id = tx_info
+						tx_n = 0
+						x = 1
+					except Exception:
+						continue
+					try:
+						while not found_reused_r or not skip_address:
+							urladdr = f"https://sochain.com/api/v2/tx/BTC/{tx_id[tx_n]['txid']}"
+							rawdata_res = requests.get(urladdr, headers = headers).json()
+							rawdata = rawdata_res["data"]["inputs"][0]["script_asm"]
+							rawdata = rawdata.replace(" ", "")
+							prev_r = rawdata[8:72]
 
-xi = 0
-zi = 1
-lenx = len(inputs)
-alert = 0
+							if(len(rawdata_res["data"]["inputs"]) == 0):
+								break
+							if(len(rawdata_res["data"]["inputs"]) == 1):
+								tx_n += 1
+								continue
+							while x < len(rawdata_res["data"]["inputs"]): 
+								print()
+								print(f"compare : {prev_r} <=> {rawdata_res['data']['inputs'][x]['script_asm'][8:72]}")
+								if prev_r == rawdata_res['data']['inputs'][x]['script_asm'][8:72]:
+									print("¥a")
+									if(not len(prev_r) == 64):
+										skip_address = True
+										break
+									message = ""
+									message += "-----------------------------\n"
+									message += f"Address : {tx_addr}\n"
+									message += f"TXID : {tx_id[tx_n]['txid']}\n"
+									message += "Reused R-Value: \n"
+									message += prev_r + "\n"
+									message += "-----------------------------\n"
+									print(message)
+									reused = open("vulnList.txt", "a")
+									print(message, file = reused)
+									reused.close()
+									found_reused_r = True
+								x += 1
+							tx_n += 1
+							x = 1
 
-#compare the sig values in each input script
-while xi < lenx-1:
-	x = 0
-	while x < lenx-zi: 
-		if inputs[xi][10:74] == inputs[x+zi][10:74]:
-			print "In Input NR: " + str(xi) + "[global increment] " + str(inputs[xi])
-			print('\a')
-                        print "Resued R-Value: "
-			print inputs[x+zi][10:74]
-                        alert += 1
-
-		x += 1
-		
-	zi += 1
-	xi += 1
-
-#check duplicates
-#alert when everything ok
-
-if alert < 1:
-	print "Good pubKey. No problems."
+					except Exception as e:
+						pass
 
 
-sys.exit()
+			except Exception:
+				continue
+else:
+
+	addr_files = input("address list file path --> ")
+	addr_files = open(addr_files, "r")
+	tx_n = 0
+
+	tx_information = None 
+	tx_id = None	
+	tx_count = None
+	tx_n = None
+	x = None
+	while(True):
+		found_reused_r = False
+		addr = addr_files.readline()
+		if not addr:
+			break
+		if(not addr.startswith("1")):
+			continue
+		addr = addr[:34]
+		addr = addr.replace("\n", "")
+		print(addr)
+		if(addr == ""):
+			continue
+		urladdr = f"https://sochain.com/api/v2/address/BTC/{addr}"
+		headers = {"content-type": "application/json"}
+		try:
+			tx_info = requests.get(urladdr).json()["data"]["txs"]
+			tx_id = tx_info
+			tx_n = 0
+			x = 1
+		except Exception:
+			continue
+		try:
+			while not found_reused_r:
+				urladdr = f"https://sochain.com/api/v2/tx/BTC/{tx_id[tx_n]['txid']}"
+				rawdata_res = requests.get(urladdr, headers = headers).json()
+				rawdata = rawdata_res["data"]["inputs"][0]["script_asm"]
+				rawdata = rawdata.replace(" ", "")
+				prev_r = rawdata[8:72]
+
+				if(len(rawdata_res["data"]["inputs"]) == 0):
+					break
+				if(len(rawdata_res["data"]["inputs"]) == 1):
+					tx_n += 1
+					continue
+				while x < len(rawdata_res["data"]["inputs"]): 
+					print()
+					print(f"compare : {prev_r} <=> {rawdata_res['data']['inputs'][x]['script_asm'][8:72]}")
+					if prev_r == rawdata_res['data']['inputs'][x]['script_asm'][8:72]:
+						message = ""
+						message += "-----------------------------\n"
+						message += f"Address : {addr}\n"
+						message += f"TXID2 : {tx_id[tx_n]['txid']}\n"
+						message += "Reused R-Value: \n"
+						message += prev_r + "\n"
+						message += "-----------------------------\n"
+						print(message)
+						reused = open("vulnList.txt", "a")
+						print(message, file = reused)
+						reused.close()
+						found_reused_r = True
+					x += 1
+				tx_n += 1
+				x = 1
+
+		except Exception as e:
+			pass
+
+	addr_files.close()

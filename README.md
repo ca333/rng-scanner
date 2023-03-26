@@ -4,4 +4,4 @@ dependcies: python
 
 questions? ca333@protonmail.com - irc @ca333 - bct @ca333
 
-if you like my work donate to: 1333xGBTvVHJARCA3xJ1vqCw2BJx12mDJz
+if you like my work donate to: 16xo6rEJj6WSDayEQ8TADCC9Wr87oiTA6n
